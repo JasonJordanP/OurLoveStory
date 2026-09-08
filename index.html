@@ -1172,7 +1172,7 @@
 <div class="transfer-bar">
   <button class="transfer-btn" id="exportBtn">⭳ Exportar</button>
   <button class="transfer-btn" id="importBtn">⭱ Importar</button>
-  <button class="transfer-btn" id="cleanVideosBtn">🧹 Limpiar videos</button>
+  <button class="transfer-btn" id="compressPhotosBtn">🗜 Comprimir fotos</button>
   <input type="file" id="importFileInput" accept="application/json" style="display:none">
 </div>
 
@@ -1590,43 +1590,81 @@
     uploadProgressFill.style.width = '0%';
   }
 
+  const IMAGE_MAX_DIM = 1600;
+  const IMAGE_QUALITY = 0.78;
+
+  function compressImageFile(file, maxDim, quality){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim){
+          if (width >= height){ height = Math.round(height * maxDim / width); width = maxDim; }
+          else { width = Math.round(width * maxDim / height); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(url);
+        try { resolve(canvas.toDataURL('image/jpeg', quality)); }
+        catch (e) { reject(e); }
+      };
+      img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+      img.src = url;
+    });
+  }
+
+  function compressImageDataUrl(src, maxDim, quality){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim){
+          if (width >= height){ height = Math.round(height * maxDim / width); width = maxDim; }
+          else { width = Math.round(width * maxDim / height); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        try { resolve(canvas.toDataURL('image/jpeg', quality)); }
+        catch (e) { reject(e); }
+      };
+      img.onerror = (e) => reject(e);
+      img.src = src;
+    });
+  }
+
   fileInput.addEventListener('change', () => {
     const files = Array.from(fileInput.files || []).filter(f => f.type && f.type.indexOf('image/') === 0);
     if (files.length === 0){ fileInput.value = ''; return; }
     const startLen = pendingMedia.length;
-
-    const totalBytes = files.reduce((sum, f) => sum + f.size, 0) || 1;
-    const loadedBytes = files.map(() => 0);
     let completed = 0;
 
     updateUploadProgress(0, 0, files.length);
 
-    function reportProgress(){
-      const sumLoaded = loadedBytes.reduce((sum, v) => sum + v, 0);
-      const pct = Math.min(100, Math.round((sumLoaded / totalBytes) * 100));
-      updateUploadProgress(pct, completed, files.length);
-    }
-
     files.forEach((file, i) => {
-      const reader = new FileReader();
-      reader.onprogress = (e) => {
-        loadedBytes[i] = e.lengthComputable ? e.loaded : file.size;
-        reportProgress();
-      };
-      reader.onload = () => {
-        loadedBytes[i] = file.size;
-        pendingMedia[startLen + i] = { type: 'image', src: reader.result };
-        completed++;
-        reportProgress();
-        if (completed === files.length) { hideUploadProgress(); renderImageArea(); }
-      };
-      reader.onerror = () => {
-        loadedBytes[i] = file.size;
-        completed++;
-        reportProgress();
-        if (completed === files.length) { hideUploadProgress(); renderImageArea(); }
-      };
-      reader.readAsDataURL(file);
+      compressImageFile(file, IMAGE_MAX_DIM, IMAGE_QUALITY)
+        .catch(() => new Promise((resolve, reject) => {
+          // si la compresión falla (formato raro, etc.), usamos el archivo original sin comprimir
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        }))
+        .then((dataUrl) => {
+          pendingMedia[startLen + i] = { type: 'image', src: dataUrl };
+        })
+        .catch(() => { /* se descarta ese archivo puntual si todo falló */ })
+        .finally(() => {
+          completed++;
+          updateUploadProgress(Math.round((completed / files.length) * 100), completed, files.length);
+          if (completed === files.length) { hideUploadProgress(); renderImageArea(); }
+        });
     });
     fileInput.value = '';
   });
@@ -2004,19 +2042,48 @@
     document.getElementById('importFileInput').click();
   });
 
-  document.getElementById('cleanVideosBtn').addEventListener('click', async () => {
-    setStatus('Buscando videos guardados...');
+  document.getElementById('compressPhotosBtn').addEventListener('click', async () => {
+    setStatus('Comprimiendo fotos guardadas, puede tardar un momento...');
     try {
-      const removed = await cleanupVideosNow();
-      const { usage } = await getStorageSnapshot();
-      const usedMB = (usage / (1024 * 1024)).toFixed(1);
-      if (removed > 0){
-        setStatus(removed + ' video' + (removed === 1 ? '' : 's') + ' eliminado' + (removed === 1 ? '' : 's') + '. Espacio usado ahora: ' + usedMB + ' MB');
-      } else {
-        setStatus('No se encontró ningún video guardado. Espacio usado: ' + usedMB + ' MB');
+      const all = await idbGetAllEntries();
+      let processed = 0;
+      let bytesBefore = 0;
+      let bytesAfter = 0;
+      for (const monthKeyStr of Object.keys(all)){
+        const monthObj = all[monthKeyStr] || {};
+        let changed = false;
+        for (const dayKeyStr of Object.keys(monthObj)){
+          const entry = monthObj[dayKeyStr];
+          if (!entry || !entry.media) continue;
+          for (let i = 0; i < entry.media.length; i++){
+            const m = entry.media[i];
+            if (!m || m.type !== 'image' || !m.src) continue;
+            try {
+              const originalLen = m.src.length;
+              const compressed = await compressImageDataUrl(m.src, IMAGE_MAX_DIM, IMAGE_QUALITY);
+              if (compressed.length < originalLen){
+                bytesBefore += originalLen;
+                bytesAfter += compressed.length;
+                entry.media[i] = { type: 'image', src: compressed };
+                processed++;
+                changed = true;
+              }
+            } catch (e) { /* si una foto puntual falla, seguimos con las demás */ }
+          }
+        }
+        if (changed) await idbSet(monthKeyStr, monthObj);
       }
+      if (processed > 0){
+        const savedMB = ((bytesBefore - bytesAfter) / (1024 * 1024)).toFixed(1);
+        const { usage } = await getStorageSnapshot();
+        const usedMB = (usage / (1024 * 1024)).toFixed(1);
+        setStatus(processed + ' foto' + (processed === 1 ? '' : 's') + ' comprimida' + (processed === 1 ? '' : 's') + ', ~' + savedMB + ' MB liberados. Espacio usado ahora: ' + usedMB + ' MB');
+      } else {
+        setStatus('Tus fotos ya están livianas, no hizo falta comprimir nada.');
+      }
+      render();
     } catch (e) {
-      setStatus('No se pudo revisar el almacenamiento. Probá de nuevo.', true);
+      setStatus('No se pudo comprimir. Probá de nuevo.', true);
     }
   });
 
@@ -2130,17 +2197,34 @@
     calendarWrap.style.display = 'block';
   });
 
-  async function applyBackupPayload(parsed){
+  async function applyBackupPayload(parsed, mergeOnly){
     const data = parsed && parsed.data ? parsed.data : parsed;
     const keys = Object.keys(data || {});
     for (const k of keys){
       if (k.indexOf('calendar-month:') === 0){
-        await idbSet(k, data[k]);
+        if (!mergeOnly){
+          await idbSet(k, data[k]);
+        } else {
+          // Modo no destructivo: completamos días que faltan, sin pisar los que ya existen localmente.
+          let existing;
+          try { existing = (await idbGet(k)) || {}; } catch (e) { existing = {}; }
+          let changed = false;
+          Object.keys(data[k] || {}).forEach(dayKey => {
+            if (!(dayKey in existing)){
+              existing[dayKey] = data[k][dayKey];
+              changed = true;
+            }
+          });
+          if (changed) await idbSet(k, existing);
+        }
       }
     }
     if (parsed && typeof parsed.introMessage === 'string' && parsed.introMessage.trim()){
-      try { localStorage.setItem(INTRO_MSG_KEY, parsed.introMessage); } catch (e) { /* ignorar */ }
-      renderIntroMessage();
+      const currentIntro = localStorage.getItem(INTRO_MSG_KEY) || '';
+      if (!mergeOnly || !currentIntro.trim()){
+        try { localStorage.setItem(INTRO_MSG_KEY, parsed.introMessage); } catch (e) { /* ignorar */ }
+        renderIntroMessage();
+      }
     }
   }
 
@@ -2148,20 +2232,18 @@
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return false;
     const parsed = await res.json();
-    await applyBackupPayload(parsed);
+    await applyBackupPayload(parsed, true);
     return true;
   }
 
   async function autoImportBackupIfPresent(){
-    const FLAG = 'calendar-auto-import-v8';
     const BACKUP_URL = 'https://raw.githubusercontent.com/JasonJordanP/OurLoveStory/main/agenda-visual-backup.json';
     try {
-      if (localStorage.getItem(FLAG)) return;
+      // Corre en cada apertura de la página (no solo una vez): como el modo de fusión
+      // nunca pisa datos que ya existen localmente, es seguro repetirlo siempre.
       await fetchAndApplyBackup(BACKUP_URL);
-      localStorage.setItem(FLAG, '1');
     } catch (e) {
       // sin conexión, sin archivo, bloqueo de CORS, o formato inválido: no hacemos nada
-      try { localStorage.setItem(FLAG, '1'); } catch (e2) { /* ignorar */ }
     }
   }
 
