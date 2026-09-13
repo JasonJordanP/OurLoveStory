@@ -922,6 +922,22 @@
     z-index: 2;
   }
   .photo-back-btn:hover { filter: brightness(0.96); }
+  .photo-download-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: #FFFFFF;
+    color: var(--gold);
+    font-size: 17px;
+    cursor: pointer;
+    box-shadow: 0 6px 14px -6px var(--shadow);
+    z-index: 2;
+  }
+  .photo-download-btn:hover { filter: brightness(0.96); }
   .photo-nav-btn {
     position: absolute;
     top: 50%;
@@ -1155,6 +1171,7 @@
 
 <div class="photo-popup" id="photoPopup">
   <button class="photo-back-btn" id="photoBackBtn" aria-label="Volver">←</button>
+  <button class="photo-download-btn" id="photoDownloadBtn" aria-label="Descargar foto">⬇</button>
   <button class="photo-nav-btn prev" id="photoPrevBtn" aria-label="Anterior">‹</button>
   <img class="photo-popup-img" id="photoPopupImg" alt="">
   <button class="photo-nav-btn next" id="photoNextBtn" aria-label="Siguiente">›</button>
@@ -1166,6 +1183,15 @@
   <div class="confirm-popup-actions">
     <button type="button" class="ghost" id="confirmDeleteCancel">Cancelar</button>
     <button type="button" class="primary" id="confirmDeleteConfirm">Sí, borrar</button>
+  </div>
+</div>
+
+<div class="confirm-popup" id="confirmDiscardPopup">
+  <div class="confirm-popup-title">¿Salir sin guardar?</div>
+  <div class="confirm-popup-text">Tenés cambios en este día que todavía no guardaste. Si salís ahora, se van a perder.</div>
+  <div class="confirm-popup-actions">
+    <button type="button" class="ghost" id="confirmDiscardCancel">Seguir editando</button>
+    <button type="button" class="primary" id="confirmDiscardConfirm">Salir sin guardar</button>
   </div>
 </div>
 
@@ -1187,9 +1213,11 @@
   let viewMonth = 9; // 0-indexed: octubre
   let monthData = {};
   let selectedDay = null;
+  let panelSnapshot = null;
   let pendingMedia = []; // array of {type:'image', src} while editing
   let heartMedia = [];
   let heartIndex = 0;
+  let heartDay = null;
   let photoMedia = [];
   let photoIndex = 0;
 
@@ -1643,30 +1671,34 @@
     const files = Array.from(fileInput.files || []).filter(f => f.type && f.type.indexOf('image/') === 0);
     if (files.length === 0){ fileInput.value = ''; return; }
     const startLen = pendingMedia.length;
-    let completed = 0;
+    fileInput.value = '';
 
     updateUploadProgress(0, 0, files.length);
 
-    files.forEach((file, i) => {
-      compressImageFile(file, IMAGE_MAX_DIM, IMAGE_QUALITY)
-        .catch(() => new Promise((resolve, reject) => {
-          // si la compresión falla (formato raro, etc.), usamos el archivo original sin comprimir
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        }))
-        .then((dataUrl) => {
-          pendingMedia[startLen + i] = { type: 'image', src: dataUrl };
-        })
-        .catch(() => { /* se descarta ese archivo puntual si todo falló */ })
-        .finally(() => {
-          completed++;
-          updateUploadProgress(Math.round((completed / files.length) * 100), completed, files.length);
-          if (completed === files.length) { hideUploadProgress(); renderImageArea(); }
-        });
-    });
-    fileInput.value = '';
+    (async () => {
+      for (let i = 0; i < files.length; i++){
+        const file = files[i];
+        let dataUrl;
+        try {
+          dataUrl = await compressImageFile(file, IMAGE_MAX_DIM, IMAGE_QUALITY);
+        } catch (e) {
+          try {
+            dataUrl = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            });
+          } catch (e2) {
+            dataUrl = null; // se descarta esa foto puntual si todo falló
+          }
+        }
+        if (dataUrl) pendingMedia[startLen + i] = { type: 'image', src: dataUrl };
+        updateUploadProgress(Math.round(((i + 1) / files.length) * 100), i + 1, files.length);
+      }
+      hideUploadProgress();
+      renderImageArea();
+    })();
   });
 
   const EMOJI_LIST = [
@@ -1752,6 +1784,14 @@
     overlay.classList.add('open');
     panel.classList.add('open');
     setTimeout(() => titleInput.focus(), 200);
+
+    panelSnapshot = JSON.stringify({ title: titleInput.value, note: noteInput.value, media: pendingMedia });
+  }
+
+  function hasUnsavedChanges(){
+    if (panelSnapshot === null) return false;
+    const current = JSON.stringify({ title: titleInput.value, note: noteInput.value, media: pendingMedia });
+    return current !== panelSnapshot;
   }
 
   function closePanel(){
@@ -1759,6 +1799,7 @@
     panel.classList.remove('open');
     selectedDay = null;
     pendingMedia = [];
+    panelSnapshot = null;
     emojiPanel.classList.remove('open');
     if (activeEmojiTrigger) activeEmojiTrigger.classList.remove('active');
     activeEmojiField = null;
@@ -1766,6 +1807,7 @@
     hideUploadProgress();
     setPanelStatus('');
     confirmDeletePopup.classList.remove('open');
+    confirmDiscardPopup.classList.remove('open');
   }
 
   const heartPopup = document.getElementById('heartPopup');
@@ -1839,6 +1881,7 @@
 
     heartMedia = (entry.media && entry.media.length) ? entry.media : [];
     heartIndex = 0;
+    heartDay = day;
     renderHeartCarousel();
 
     document.getElementById('heartTitleText').textContent = entry.title || '';
@@ -1903,14 +1946,42 @@
     renderPhotoPopup();
   });
 
+  function buildPhotoFilename(){
+    const datePart = viewYear + '-' + pad(viewMonth + 1) + '-' + pad(heartDay || 1);
+    const suffix = photoMedia.length > 1 ? ('-' + (photoIndex + 1)) : '';
+    return datePart + suffix + '.jpg';
+  }
+
+  document.getElementById('photoDownloadBtn').addEventListener('click', () => {
+    const current = photoMedia[photoIndex];
+    if (!current || !current.src) return;
+    const a = document.createElement('a');
+    a.href = current.src;
+    a.download = buildPhotoFilename();
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+
   function closeTopLayer(){
     if (confirmDeletePopup.classList.contains('open')) { confirmDeletePopup.classList.remove('open'); return; }
+    if (confirmDiscardPopup.classList.contains('open')) { confirmDiscardPopup.classList.remove('open'); return; }
     if (photoPopup.classList.contains('open')) { closePhotoPopup(); return; }
+    if (panel.classList.contains('open') && hasUnsavedChanges()){
+      confirmDiscardPopup.classList.add('open');
+      return;
+    }
     closePanel();
     closeHeartPopup();
   }
 
-  document.getElementById('closeBtn').addEventListener('click', closePanel);
+  document.getElementById('closeBtn').addEventListener('click', () => {
+    if (hasUnsavedChanges()){
+      confirmDiscardPopup.classList.add('open');
+    } else {
+      closePanel();
+    }
+  });
   document.getElementById('heartCloseBtn').addEventListener('click', closeHeartPopup);
   document.getElementById('photoBackBtn').addEventListener('click', closePhotoPopup);
   overlay.addEventListener('click', closeTopLayer);
@@ -1945,6 +2016,15 @@
   });
 
   const confirmDeletePopup = document.getElementById('confirmDeletePopup');
+  const confirmDiscardPopup = document.getElementById('confirmDiscardPopup');
+
+  document.getElementById('confirmDiscardCancel').addEventListener('click', () => {
+    confirmDiscardPopup.classList.remove('open');
+  });
+  document.getElementById('confirmDiscardConfirm').addEventListener('click', () => {
+    confirmDiscardPopup.classList.remove('open');
+    closePanel();
+  });
 
   async function performDelete(){
     if (selectedDay === null) return;
