@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Agenda Visual</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%23C85379' d='M16 28.5S3 20.8 3 12.4C3 7.8 6.6 4.5 10.7 4.5c2.5 0 4.7 1.3 5.3 3.3.6-2 2.8-3.3 5.3-3.3C25.4 4.5 29 7.8 29 12.4 29 20.8 16 28.5 16 28.5z'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -22,6 +23,18 @@
     --font-mono: 'IBM Plex Mono', monospace;
   }
 
+  [data-theme="dark"]{
+    --bg: #1A1014;
+    --surface: #271920;
+    --surface-2: #3A242D;
+    --paper: #F3D9E0;
+    --paper-dim: #B98A9B;
+    --gold: #FF7AA3;
+    --sage: #D98BA5;
+    --line: #4A2E38;
+    --shadow: rgba(0,0,0,0.55);
+  }
+
   * { box-sizing: border-box; }
 
   html, body {
@@ -31,13 +44,21 @@
     color: var(--paper);
     font-family: var(--font-body);
     min-height: 100%;
+    transition: background-color .25s ease, color .25s ease;
   }
 
   body {
     background-image:
       radial-gradient(circle at 20% 10%, rgba(200,83,121,0.09), transparent 40%),
-      radial-gradient(circle at 80% 90%, rgba(223,160,176,0.14), transparent 40%);
+      radial-gradient(circle at 80% 90%, rgba(223,160,176,0.14), transparent 40%),
+      radial-gradient(circle at 50% 50%, rgba(200,83,121,0.04), transparent 60%),
+      repeating-linear-gradient(135deg, rgba(200,83,121,0.025) 0px, rgba(200,83,121,0.025) 1px, transparent 1px, transparent 28px);
     padding: 40px 20px 80px;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
   }
 
   .wrap {
@@ -52,6 +73,15 @@
     margin-bottom: 28px;
     flex-wrap: wrap;
     gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    background: var(--bg);
+    padding: 10px 0;
+    transition: box-shadow .2s ease, background-color .25s ease;
+  }
+  header.scrolled {
+    box-shadow: 0 8px 20px -14px var(--shadow);
   }
 
   .page-title {
@@ -59,16 +89,22 @@
     align-items: center;
     justify-content: center;
     margin-bottom: 26px;
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    padding: 0 12px;
+    box-sizing: border-box;
   }
   .page-title-text {
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: clamp(32px, 7vw, 48px);
-    color: var(--gold);
+    font-size: clamp(16px, 5vw, 44px);
+    color: #6B2942;
     text-align: center;
     margin: 0;
     line-height: 1.15;
     letter-spacing: -0.01em;
+    white-space: nowrap;
   }
 
   @media (max-width: 480px) {
@@ -228,6 +264,11 @@
   }
   .nav-btn:hover { border-color: var(--gold); transform: translateY(-1px); }
   .nav-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .nav-btn.active {
+    background: var(--gold);
+    color: #FFFFFF;
+    border-color: var(--gold);
+  }
 
   .today-btn {
     font-family: var(--font-mono);
@@ -243,13 +284,148 @@
   }
   .today-btn:hover { color: var(--gold); border-color: var(--gold); }
 
+  .anniversary-message {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(10.5px, 2.1vw, 15px);
+    color: var(--gold);
+    text-align: center;
+    margin: 0 auto 24px;
+    line-height: 1.4;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 12px 16px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto;
+  }
+
+  .year-ago-banner {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--paper);
+    cursor: pointer;
+  }
+  .year-ago-banner.show { display: flex; }
+  .year-ago-banner .yab-icon { font-size: 18px; flex-shrink: 0; }
+  .year-ago-banner:hover { border-color: var(--gold); }
+
+  .search-bar {
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .search-bar input {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--paper);
+  }
+  .search-bar input:focus { outline: none; border-color: var(--gold); }
+  .search-results {
+    margin-top: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .search-result-item {
+    text-align: left;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--font-body);
+  }
+  .search-result-item:hover { border-color: var(--gold); }
+  .search-result-date {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 3px;
+  }
+  .search-result-title { font-size: 13.5px; color: var(--paper); font-weight: 600; }
+  .search-result-snippet { font-size: 12.5px; color: var(--paper-dim); margin-top: 2px; }
+  .search-empty { font-size: 12.5px; color: var(--paper-dim); text-align: center; padding: 10px; }
+
+  .gallery-view {
+    display: none;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px;
+  }
+  .gallery-view.show { display: grid; }
+  .gallery-item {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--surface-2);
+  }
+  .gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .2s ease; }
+  .gallery-item:hover img { transform: scale(1.06); }
+  .gallery-item-date {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: #FFFFFF;
+    background: linear-gradient(transparent, rgba(0,0,0,0.6));
+    padding: 12px 6px 4px;
+    text-align: center;
+  }
+  .gallery-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--paper-dim);
+    font-size: 13px;
+    padding: 30px 10px;
+  }
+
   .board {
+    position: relative;
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 18px;
     padding: 22px;
     box-shadow: 0 30px 60px -20px var(--shadow);
+    transition: opacity .15s ease;
   }
+  .board.loading .grid { opacity: 0.35; }
+  .board-spinner {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 30px;
+    height: 30px;
+    margin: -15px 0 0 -15px;
+    border: 3px solid var(--line);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  .board.loading .board-spinner { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   .weekdays {
     display: grid;
@@ -308,43 +484,31 @@
     background-position: center;
     filter: drop-shadow(0 3px 6px var(--shadow));
     z-index: 1;
+    transition: transform .2s ease;
+  }
+  .cell:hover .heart-icon {
+    animation: heartbeat 1s ease-in-out infinite;
+  }
+  @keyframes heartbeat {
+    0%, 100% { transform: translateX(-50%) scale(1); }
+    25% { transform: translateX(-50%) scale(1.12); }
+    40% { transform: translateX(-50%) scale(1); }
+    55% { transform: translateX(-50%) scale(1.08); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cell:hover .heart-icon { animation: none; }
   }
 
-  .day-actions {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    background: rgba(255,255,255,0.9);
-    border-radius: 10px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .15s;
-    z-index: 3;
-  }
-  .cell:hover .day-actions,
-  .cell:focus-within .day-actions {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  .day-action-btn {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    color: var(--paper);
-    padding: 5px 9px;
-    border-radius: 14px;
+  .cell.clickable {
     cursor: pointer;
   }
-  .day-action-btn:hover {
-    border-color: var(--gold);
-    color: var(--gold);
+  body.edit-mode .cell.clickable:hover,
+  body.edit-mode .cell.clickable:focus-visible {
+    outline: 2px dashed var(--gold);
+    outline-offset: 2px;
+  }
+  body:not(.edit-mode) .cell.clickable:hover .heart-icon {
+    filter: drop-shadow(0 3px 6px var(--shadow)) brightness(1.05);
   }
 
   .note-dot {
@@ -739,6 +903,42 @@
   }
   .heart-close-btn:hover { filter: brightness(0.96); }
 
+  .heart-entry-nav {
+    position: absolute;
+    top: 50%;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: #6B2942;
+    color: #FFFFFF;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 20px -8px rgba(0,0,0,0.4);
+    transition: transform .15s ease, box-shadow .15s ease;
+    z-index: 3;
+  }
+  .heart-entry-nav.prev {
+    left: -60px;
+    transform: translateY(-50%);
+  }
+  .heart-entry-nav.next {
+    right: -60px;
+    transform: translateY(-50%);
+  }
+  .heart-entry-nav.prev:hover {
+    transform: translateY(-50%) translateY(-4px);
+    box-shadow: 0 16px 28px -8px rgba(0,0,0,0.45);
+  }
+  .heart-entry-nav.next:hover {
+    transform: translateY(-50%) translateY(-4px);
+    box-shadow: 0 16px 28px -8px rgba(0,0,0,0.45);
+  }
+
   .heart-shape {
     position: relative;
     width: fit-content;
@@ -1014,6 +1214,35 @@
     min-height: 14px;
   }
 
+  .toast-container {
+    position: fixed;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    pointer-events: none;
+  }
+  .toast {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: #FFFFFF;
+    background: var(--paper);
+    border-radius: 999px;
+    padding: 10px 20px;
+    box-shadow: 0 14px 32px -12px rgba(0,0,0,0.4);
+    opacity: 0;
+    transform: translateY(-14px);
+    transition: opacity .25s ease, transform .25s ease;
+    max-width: min(88vw, 420px);
+    text-align: center;
+  }
+  .toast.error { background: #B5495B; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
   .panel-status {
     font-family: var(--font-mono);
     font-size: 11px;
@@ -1031,6 +1260,9 @@
     .grid { grid-auto-rows: 78px; }
     .heart-icon { width: 34px; height: 34px; top: 30px; }
     h1 { font-size: 26px; }
+    .heart-entry-nav { width: 36px; height: 36px; font-size: 16px; }
+    .heart-entry-nav.prev { left: -14px; }
+    .heart-entry-nav.next { right: -14px; }
   }
 
   .transfer-bar {
@@ -1064,11 +1296,165 @@
     .transfer-bar { bottom: 14px; right: 14px; }
     .transfer-btn { padding: 8px 12px; font-size: 11px; }
   }
+
+  .month-picker-widget {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 6;
+  }
+  .month-picker-toggle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(160deg, var(--gold), var(--paper));
+    color: #FFFFFF;
+    cursor: pointer;
+    box-shadow: 0 10px 24px -10px var(--shadow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  .month-picker-toggle:hover { filter: brightness(1.08); }
+  .month-picker-panel {
+    position: absolute;
+    bottom: 54px;
+    left: 0;
+    width: min(260px, 84vw);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 20px 50px -16px var(--shadow);
+    padding: 14px;
+    box-sizing: border-box;
+    display: none;
+  }
+  .month-picker-panel.open { display: block; }
+  .month-picker-year-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .month-picker-year-row span {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--paper);
+  }
+  .month-picker-year-row button {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--paper);
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .month-picker-year-row button:hover { border-color: var(--gold); }
+  .month-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .month-picker-item {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: .02em;
+    padding: 8px 0;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--paper);
+    cursor: pointer;
+  }
+  .month-picker-item:hover { border-color: var(--gold); }
+  .month-picker-item.current {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #FFFFFF;
+  }  #printArea { display: none; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea {
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background: #FFFFFF;
+      color: #2A1420;
+      font-family: var(--font-body);
+      padding: 20px;
+    }
+    .print-title {
+      font-family: var(--font-display);
+      font-size: 26px;
+      text-align: center;
+      margin-bottom: 6px;
+      color: #6B2942;
+    }
+    .print-intro {
+      font-style: italic;
+      text-align: center;
+      color: #6B2942;
+      margin-bottom: 24px;
+      white-space: pre-wrap;
+    }
+    .print-entry {
+      page-break-inside: avoid;
+      border-bottom: 1px solid #ddd;
+      padding: 14px 0;
+    }
+    .print-entry-date {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: #C85379;
+    }
+    .print-entry-title {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      margin: 4px 0 6px;
+    }
+    .print-entry-note {
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      margin: 0 0 8px;
+    }
+    .print-photos {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .print-photos img {
+      width: 110px;
+      height: 110px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+    .print-empty { text-align: center; color: #888; margin-top: 40px; }
+  }
 </style>
 </head>
 <body>
 
 <div class="intro-page" id="introPage">
+  <div class="page-title">
+    <h1 class="page-title-text">Nuestra increíble historia de amor</h1>
+  </div>
   <div class="intro-message-display" id="introMessageDisplay"></div>
   <div class="intro-textarea-wrap" id="introTextareaWrap" style="display:none">
     <textarea class="intro-textarea" id="introTextarea" placeholder="Escribí acá tu mensaje introductorio..."></textarea>
@@ -1082,28 +1468,46 @@
   </div>
 </div>
 
+<div class="toast-container" id="toastContainer"></div>
+
 <div class="wrap" id="calendarWrap" style="display:none">
   <div class="page-title">
-    <h1 class="page-title-text">Nuestra gran historia de amor</h1>
+    <h1 class="page-title-text">Nuestra increíble historia de amor</h1>
   </div>
 
-  <header>
+  <header id="mainHeader">
     <div>
-      <div class="eyebrow">Agenda visual</div>
       <div class="month-label" id="monthLabel">—</div>
     </div>
     <div class="month-nav">
       <button class="today-btn" id="todayBtn">Hoy</button>
       <button class="nav-btn" id="prevBtn" aria-label="Mes anterior">‹</button>
       <button class="nav-btn" id="nextBtn" aria-label="Mes siguiente">›</button>
+      <button class="nav-btn" id="searchToggleBtn" aria-label="Buscar">🔍</button>
+      <button class="nav-btn" id="galleryToggleBtn" aria-label="Ver galería">▦</button>
+      <button class="nav-btn" id="themeToggleBtn" aria-label="Cambiar tema">🌙</button>
+      <button class="nav-btn" id="editModeToggleBtn" aria-label="Activar modo edición">✏️</button>
     </div>
   </header>
 
-  <div class="board">
+  <div class="search-bar" id="searchBar" style="display:none">
+    <input type="text" id="searchInput" placeholder="Buscar en títulos y notas...">
+    <div class="search-results" id="searchResults"></div>
+  </div>
+
+  <div class="anniversary-message" id="anniversaryMessage"></div>
+  <div class="year-ago-banner" id="yearAgoBanner">
+    <span class="yab-icon">💌</span>
+    <span id="yearAgoText"></span>
+  </div>
+
+  <div class="board" id="board">
     <div class="weekdays">
       <div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div>
     </div>
     <div class="grid" id="grid"></div>
+    <div class="gallery-view" id="galleryView"></div>
+    <div class="board-spinner"></div>
   </div>
   <div class="status" id="status"></div>
 </div>
@@ -1159,6 +1563,8 @@
 
 <div class="heart-popup" id="heartPopup">
   <button class="heart-close-btn" id="heartCloseBtn">✕</button>
+  <button class="heart-entry-nav prev" id="heartEntryPrevBtn" aria-label="Entrada anterior">‹</button>
+  <button class="heart-entry-nav next" id="heartEntryNextBtn" aria-label="Entrada siguiente">›</button>
   <div class="heart-shape">
     <div class="heart-content">
       <div class="heart-date" id="heartDate"></div>
@@ -1195,8 +1601,29 @@
   </div>
 </div>
 
+
+<div class="month-picker-widget" id="monthPickerWidget">
+  <button type="button" class="month-picker-toggle" id="monthPickerToggle" aria-label="Elegir mes y año">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/>
+      <line x1="3" y1="9.5" x2="21" y2="9.5" stroke="currentColor" stroke-width="1.7"/>
+      <line x1="7.5" y1="3" x2="7.5" y2="7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+      <line x1="16.5" y1="3" x2="16.5" y2="7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+    </svg>
+  </button>
+  <div class="month-picker-panel" id="monthPickerPanel">
+    <div class="month-picker-year-row">
+      <button type="button" id="monthPickerYearPrev" aria-label="Año anterior">‹</button>
+      <span id="monthPickerYearLabel">2026</span>
+      <button type="button" id="monthPickerYearNext" aria-label="Año siguiente">›</button>
+    </div>
+    <div class="month-picker-grid" id="monthPickerGrid"></div>
+  </div>
+</div>
+
 <div class="transfer-bar">
   <button class="transfer-btn" id="exportBtn">⭳ Exportar</button>
+  <button class="transfer-btn" id="generatePdfBtn">📄 Generar PDF</button>
   <button class="transfer-btn" id="importBtn">⭱ Importar</button>
   <button class="transfer-btn" id="compressPhotosBtn">🗜 Comprimir fotos</button>
   <input type="file" id="importFileInput" accept="application/json" style="display:none">
@@ -1212,6 +1639,7 @@
   let viewYear = 2025;
   let viewMonth = 9; // 0-indexed: octubre
   let monthData = {};
+  let editMode = false;
   let selectedDay = null;
   let panelSnapshot = null;
   let pendingMedia = []; // array of {type:'image', src} while editing
@@ -1245,10 +1673,27 @@
 
   function pad(n){ return String(n).padStart(2,'0'); }
 
+  const toastContainer = document.getElementById('toastContainer');
+
+  function showToast(msg, isError){
+    if (!msg) return;
+    const toast = document.createElement('div');
+    toast.className = 'toast' + (isError ? ' error' : '');
+    toast.textContent = msg;
+    toastContainer.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+    const life = isError ? 3600 : 2400;
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, life);
+  }
+
   function setStatus(msg, isError){
     statusEl.textContent = msg || '';
     statusEl.style.color = isError ? '#B5495B' : 'var(--paper-dim)';
     if (msg && !isError) setTimeout(() => { if (statusEl.textContent === msg) statusEl.textContent = ''; }, 2000);
+    if (msg !== 'Cargando...') showToast(msg, isError);
   }
 
   function setPanelStatus(msg, isError){
@@ -1361,7 +1806,8 @@
   }
 
   async function loadMonth(){
-    setStatus('Cargando...');
+    const boardEl = document.getElementById('board');
+    boardEl.classList.add('loading');
     try {
       const data = await idbGet(monthKey(viewYear, viewMonth));
       monthData = data || {};
@@ -1383,8 +1829,9 @@
       delete e.image;
       delete e.images;
     });
-    setStatus('');
+    boardEl.classList.remove('loading');
     render();
+    checkAnniversaryFromLastYear();
   }
 
   async function saveMonth(){
@@ -1435,26 +1882,17 @@
         cell.appendChild(icon);
       }
 
-      const actions = document.createElement('div');
-      actions.className = 'day-actions';
-
-      if (hasEntry) {
-        const viewBtn = document.createElement('button');
-        viewBtn.type = 'button';
-        viewBtn.className = 'day-action-btn';
-        viewBtn.textContent = 'Ver';
-        viewBtn.addEventListener('click', (e) => { e.stopPropagation(); openViewPopup(day); });
-        actions.appendChild(viewBtn);
+      if (hasEntry || editMode){
+        cell.classList.add('clickable');
+        cell.tabIndex = 0;
+        cell.setAttribute('role', 'button');
+        cell.setAttribute('aria-label', (editMode ? 'Editar' : 'Ver') + ' el ' + day + ' de ' + monthNames[viewMonth]);
+        const activate = () => { if (editMode) openPanel(day); else if (hasEntry) openViewPopup(day); };
+        cell.addEventListener('click', activate);
+        cell.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); activate(); }
+        });
       }
-
-      const editBtn = document.createElement('button');
-      editBtn.type = 'button';
-      editBtn.className = 'day-action-btn';
-      editBtn.textContent = 'Editar';
-      editBtn.addEventListener('click', (e) => { e.stopPropagation(); openPanel(day); });
-      actions.appendChild(editBtn);
-
-      cell.appendChild(actions);
 
       grid.appendChild(cell);
     }
@@ -1874,6 +2312,60 @@
     }
   }
 
+  function entryHasContent(entry){
+    return !!(entry && (entry.title || entry.note || (entry.media && entry.media.length)));
+  }
+
+  async function findAdjacentEntryDay(startYear, startMonth, startDay, direction){
+    let year = startYear, month = startMonth, day = startDay;
+    const monthCache = {};
+
+    async function getMonthData(y, m){
+      const k = monthKey(y, m);
+      if (monthCache[k] !== undefined) return monthCache[k];
+      let data;
+      try { data = (await idbGet(k)) || {}; } catch (e) { data = {}; }
+      monthCache[k] = data;
+      return data;
+    }
+
+    function daysInMonthOf(y, m){ return new Date(y, m + 1, 0).getDate(); }
+
+    let iterations = 0;
+    const maxIterations = 372 * 5; // tope de seguridad: no busca más de ~5 años hacia atrás/adelante
+
+    while (iterations < maxIterations){
+      iterations++;
+      day += direction;
+      if (day < 1){
+        month -= 1;
+        if (month < 0){ month = 11; year -= 1; }
+        day = daysInMonthOf(year, month);
+      } else if (day > daysInMonthOf(year, month)){
+        month += 1;
+        if (month > 11){ month = 0; year += 1; }
+        day = 1;
+      }
+      const data = await getMonthData(year, month);
+      if (entryHasContent(data[pad(day)])){
+        return { year, month, day };
+      }
+    }
+    return null;
+  }
+
+  async function goToAdjacentEntry(direction){
+    if (heartDay === null) return;
+    const result = await findAdjacentEntryDay(viewYear, viewMonth, heartDay, direction);
+    if (!result) return;
+    if (result.year !== viewYear || result.month !== viewMonth){
+      viewYear = result.year;
+      viewMonth = result.month;
+      await loadMonth();
+    }
+    openViewPopup(result.day);
+  }
+
   function openViewPopup(day){
     const key = pad(day);
     const entry = monthData[key] || {};
@@ -1983,6 +2475,8 @@
     }
   });
   document.getElementById('heartCloseBtn').addEventListener('click', closeHeartPopup);
+  document.getElementById('heartEntryPrevBtn').addEventListener('click', () => goToAdjacentEntry(-1));
+  document.getElementById('heartEntryNextBtn').addEventListener('click', () => goToAdjacentEntry(1));
   document.getElementById('photoBackBtn').addEventListener('click', closePhotoPopup);
   overlay.addEventListener('click', closeTopLayer);
   document.addEventListener('keydown', (e) => {
@@ -2073,6 +2567,52 @@
     loadMonth();
   });
 
+  const monthPickerToggle = document.getElementById('monthPickerToggle');
+  const monthPickerPanel = document.getElementById('monthPickerPanel');
+  const monthPickerYearLabel = document.getElementById('monthPickerYearLabel');
+  const monthPickerGrid = document.getElementById('monthPickerGrid');
+  let pickerYear = viewYear;
+
+  function renderMonthPicker(){
+    monthPickerYearLabel.textContent = pickerYear;
+    monthPickerGrid.innerHTML = '';
+    monthNames.forEach((name, idx) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'month-picker-item' + (pickerYear === viewYear && idx === viewMonth ? ' current' : '');
+      btn.textContent = name.slice(0, 3);
+      btn.addEventListener('click', () => {
+        viewYear = pickerYear;
+        viewMonth = idx;
+        monthPickerPanel.classList.remove('open');
+        if (introPage.style.display !== 'none'){
+          introPage.style.display = 'none';
+          calendarWrap.style.display = 'block';
+        }
+        loadMonth();
+      });
+      monthPickerGrid.appendChild(btn);
+    });
+  }
+
+  monthPickerToggle.addEventListener('click', () => {
+    const willOpen = !monthPickerPanel.classList.contains('open');
+    if (willOpen){
+      pickerYear = viewYear;
+      renderMonthPicker();
+    }
+    monthPickerPanel.classList.toggle('open');
+  });
+
+  document.getElementById('monthPickerYearPrev').addEventListener('click', () => {
+    pickerYear--;
+    renderMonthPicker();
+  });
+  document.getElementById('monthPickerYearNext').addEventListener('click', () => {
+    pickerYear++;
+    renderMonthPicker();
+  });
+
   async function prepareDataForExport(data){
     let excludedVideos = 0;
     for (const monthKeyStr of Object.keys(data)){
@@ -2120,6 +2660,94 @@
 
   document.getElementById('importBtn').addEventListener('click', () => {
     document.getElementById('importFileInput').click();
+  });
+
+  document.getElementById('generatePdfBtn').addEventListener('click', async () => {
+    setStatus('Preparando PDF...');
+    try {
+      const all = await idbGetAllEntries();
+      const items = [];
+      Object.keys(all).forEach(mk => {
+        const m = mk.match(/calendar-month:(\d+)-(\d+)/);
+        if (!m) return;
+        const y = parseInt(m[1], 10), mo = parseInt(m[2], 10) - 1;
+        const monthObj = all[mk] || {};
+        Object.keys(monthObj).forEach(dk => {
+          const entry = monthObj[dk];
+          if (entryHasContent(entry)){
+            items.push({ year: y, month: mo, day: parseInt(dk, 10), entry });
+          }
+        });
+      });
+      items.sort((a, b) => (a.year - b.year) || (a.month - b.month) || (a.day - b.day));
+
+      const printArea = document.getElementById('printArea');
+      printArea.innerHTML = '';
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'print-title';
+      titleEl.textContent = 'Nuestra increíble historia de amor';
+      printArea.appendChild(titleEl);
+
+      const introMsg = localStorage.getItem(INTRO_MSG_KEY) || '';
+      if (introMsg.trim()){
+        const introEl = document.createElement('div');
+        introEl.className = 'print-intro';
+        introEl.textContent = introMsg;
+        printArea.appendChild(introEl);
+      }
+
+      if (items.length === 0){
+        const empty = document.createElement('div');
+        empty.className = 'print-empty';
+        empty.textContent = 'Todavía no hay entradas guardadas.';
+        printArea.appendChild(empty);
+      }
+
+      items.forEach(it => {
+        const section = document.createElement('div');
+        section.className = 'print-entry';
+
+        const dateEl = document.createElement('div');
+        dateEl.className = 'print-entry-date';
+        dateEl.textContent = pad(it.day) + '/' + pad(it.month + 1) + '/' + it.year;
+        section.appendChild(dateEl);
+
+        if (it.entry.title){
+          const titleLine = document.createElement('div');
+          titleLine.className = 'print-entry-title';
+          titleLine.textContent = it.entry.title;
+          section.appendChild(titleLine);
+        }
+
+        if (it.entry.note){
+          const noteLine = document.createElement('div');
+          noteLine.className = 'print-entry-note';
+          noteLine.textContent = it.entry.note;
+          section.appendChild(noteLine);
+        }
+
+        if (it.entry.media && it.entry.media.length){
+          const photoRow = document.createElement('div');
+          photoRow.className = 'print-photos';
+          it.entry.media.forEach(m => {
+            if (m && m.type === 'image' && m.src){
+              const img = document.createElement('img');
+              img.src = m.src;
+              photoRow.appendChild(img);
+            }
+          });
+          if (photoRow.children.length) section.appendChild(photoRow);
+        }
+
+        printArea.appendChild(section);
+      });
+
+      setStatus('');
+      window.print();
+    } catch (e) {
+      setStatus('No se pudo generar el PDF. Probá de nuevo.', true);
+    }
   });
 
   document.getElementById('compressPhotosBtn').addEventListener('click', async () => {
@@ -2327,6 +2955,293 @@
     }
   }
 
+  // ---------- Modo oscuro ----------
+  const THEME_KEY = 'calendar-theme';
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  function applyTheme(theme){
+    if (theme === 'dark'){
+      document.documentElement.setAttribute('data-theme', 'dark');
+      themeToggleBtn.textContent = '☀️';
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      themeToggleBtn.textContent = '🌙';
+    }
+  }
+  applyTheme(localStorage.getItem(THEME_KEY) || 'light');
+  themeToggleBtn.addEventListener('click', () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const next = isDark ? 'light' : 'dark';
+    applyTheme(next);
+    try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* ignorar */ }
+  });
+
+  const editModeToggleBtn = document.getElementById('editModeToggleBtn');
+  editModeToggleBtn.addEventListener('click', () => {
+    editMode = !editMode;
+    editModeToggleBtn.classList.toggle('active', editMode);
+    document.body.classList.toggle('edit-mode', editMode);
+    showToast(editMode ? 'Modo edición activado: tocá cualquier día para editarlo' : 'Modo edición desactivado');
+    render();
+  });
+
+  // ---------- Header con sombra al scrollear ----------
+  const mainHeader = document.getElementById('mainHeader');
+  window.addEventListener('scroll', () => {
+    mainHeader.classList.toggle('scrolled', window.scrollY > 4);
+  });
+
+  // ---------- Buscador ----------
+  const searchToggleBtn = document.getElementById('searchToggleBtn');
+  const searchBar = document.getElementById('searchBar');
+  const searchInput = document.getElementById('searchInput');
+  const searchResults = document.getElementById('searchResults');
+
+  searchToggleBtn.addEventListener('click', () => {
+    const open = searchBar.style.display !== 'none';
+    searchBar.style.display = open ? 'none' : 'block';
+    if (!open) searchInput.focus();
+  });
+
+  let searchDebounce = null;
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(runSearch, 200);
+  });
+
+  async function runSearch(){
+    const term = searchInput.value.trim().toLowerCase();
+    searchResults.innerHTML = '';
+    if (!term) return;
+    let matches = [];
+    try {
+      const all = await idbGetAllEntries();
+      Object.keys(all).forEach(mk => {
+        const m = mk.match(/calendar-month:(\d+)-(\d+)/);
+        if (!m) return;
+        const y = parseInt(m[1], 10), mo = parseInt(m[2], 10) - 1;
+        const monthObj = all[mk] || {};
+        Object.keys(monthObj).forEach(dk => {
+          const entry = monthObj[dk];
+          if (!entry) return;
+          const titleMatch = entry.title && entry.title.toLowerCase().includes(term);
+          const noteMatch = entry.note && entry.note.toLowerCase().includes(term);
+          if (titleMatch || noteMatch){
+            matches.push({ year: y, month: mo, day: parseInt(dk, 10), entry });
+          }
+        });
+      });
+    } catch (e) { /* ignorar */ }
+
+    matches.sort((a, b) => (b.year - a.year) || (b.month - a.month) || (b.day - a.day));
+    matches = matches.slice(0, 30);
+
+    if (matches.length === 0){
+      searchResults.innerHTML = '<div class="search-empty">Sin resultados</div>';
+      return;
+    }
+    matches.forEach(mres => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'search-result-item';
+      const dateLabel = pad(mres.day) + '/' + pad(mres.month + 1) + '/' + mres.year;
+      const snippet = (mres.entry.note || '').slice(0, 90);
+      item.innerHTML = '<div class="search-result-date"></div><div class="search-result-title"></div><div class="search-result-snippet"></div>';
+      item.querySelector('.search-result-date').textContent = dateLabel;
+      item.querySelector('.search-result-title').textContent = mres.entry.title || '(sin título)';
+      item.querySelector('.search-result-snippet').textContent = snippet;
+      item.addEventListener('click', async () => {
+        searchBar.style.display = 'none';
+        if (mres.year !== viewYear || mres.month !== viewMonth){
+          viewYear = mres.year;
+          viewMonth = mres.month;
+          await loadMonth();
+        }
+        openViewPopup(mres.day);
+      });
+      searchResults.appendChild(item);
+    });
+  }
+
+  // ---------- Vista galería ----------
+  const galleryToggleBtn = document.getElementById('galleryToggleBtn');
+  const galleryView = document.getElementById('galleryView');
+
+  galleryToggleBtn.addEventListener('click', async () => {
+    const showing = galleryView.classList.contains('show');
+    if (showing){
+      galleryView.classList.remove('show');
+      grid.style.display = 'grid';
+      galleryToggleBtn.textContent = '▦';
+    } else {
+      grid.style.display = 'none';
+      galleryView.classList.add('show');
+      galleryToggleBtn.textContent = '🗓';
+      await renderGallery();
+    }
+  });
+
+  async function renderGallery(){
+    galleryView.innerHTML = '<div class="gallery-empty">Cargando fotos...</div>';
+    let items = [];
+    try {
+      const all = await idbGetAllEntries();
+      Object.keys(all).forEach(mk => {
+        const m = mk.match(/calendar-month:(\d+)-(\d+)/);
+        if (!m) return;
+        const y = parseInt(m[1], 10), mo = parseInt(m[2], 10) - 1;
+        const monthObj = all[mk] || {};
+        Object.keys(monthObj).forEach(dk => {
+          const entry = monthObj[dk];
+          if (entry && entry.media){
+            entry.media.forEach(med => {
+              if (med && med.type === 'image' && med.src){
+                items.push({ year: y, month: mo, day: parseInt(dk, 10), src: med.src });
+              }
+            });
+          }
+        });
+      });
+    } catch (e) { /* ignorar */ }
+
+    items.sort((a, b) => (b.year - a.year) || (b.month - a.month) || (b.day - a.day));
+
+    galleryView.innerHTML = '';
+    if (items.length === 0){
+      galleryView.innerHTML = '<div class="gallery-empty">Todavía no subiste fotos.</div>';
+      return;
+    }
+    items.forEach(it => {
+      const cell = document.createElement('div');
+      cell.className = 'gallery-item';
+      cell.tabIndex = 0;
+      cell.setAttribute('role', 'button');
+      cell.setAttribute('aria-label', 'Ver entrada del ' + pad(it.day) + '/' + pad(it.month + 1) + '/' + it.year);
+      const img = document.createElement('img');
+      img.src = it.src;
+      img.alt = '';
+      cell.appendChild(img);
+      const label = document.createElement('div');
+      label.className = 'gallery-item-date';
+      label.textContent = pad(it.day) + '/' + pad(it.month + 1) + '/' + it.year;
+      cell.appendChild(label);
+      const openThisEntry = async () => {
+        galleryView.classList.remove('show');
+        grid.style.display = 'grid';
+        galleryToggleBtn.textContent = '▦';
+        if (it.year !== viewYear || it.month !== viewMonth){
+          viewYear = it.year;
+          viewMonth = it.month;
+          await loadMonth();
+        }
+        openViewPopup(it.day);
+      };
+      cell.addEventListener('click', openThisEntry);
+      cell.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openThisEntry(); }
+      });
+      galleryView.appendChild(cell);
+    });
+  }
+
+  // ---------- Contador de aniversario (fecha fija: 24/10/2025) ----------
+  const ANNIVERSARY_DATE = '2025-10-24T20:17:00';
+  const anniversaryMessage = document.getElementById('anniversaryMessage');
+
+  function getAnniversaryBreakdown(start, now){
+    let years = now.getFullYear() - start.getFullYear();
+    let months = now.getMonth() - start.getMonth();
+    let days = now.getDate() - start.getDate();
+    let hours = now.getHours() - start.getHours();
+    let minutes = now.getMinutes() - start.getMinutes();
+    let seconds = now.getSeconds() - start.getSeconds();
+
+    if (seconds < 0){ seconds += 60; minutes--; }
+    if (minutes < 0){ minutes += 60; hours--; }
+    if (hours < 0){ hours += 24; days--; }
+    if (days < 0){
+      const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+      days += prevMonth.getDate();
+      months--;
+    }
+    if (months < 0){ months += 12; years--; }
+
+    const weeks = Math.floor(days / 7);
+    const remDays = days % 7;
+
+    return { years, months, weeks, days: remDays, hours, minutes, seconds };
+  }
+
+  function unitLabel(n, singular, plural){
+    return n + ' ' + (n === 1 ? singular : plural);
+  }
+
+  function renderAnniversaryMessage(){
+    const start = new Date(ANNIVERSARY_DATE);
+    const now = new Date();
+    if (now < start){
+      anniversaryMessage.textContent = 'Todavía falta para el 24/10/2025';
+      return;
+    }
+    const b = getAnniversaryBreakdown(start, now);
+    const phrase = 'Llevamos ' +
+      unitLabel(b.years, 'año', 'años') + ', ' +
+      unitLabel(b.months, 'mes', 'meses') + ', ' +
+      unitLabel(b.weeks, 'semana', 'semanas') + ', ' +
+      unitLabel(b.days, 'día', 'días') + ', ' +
+      unitLabel(b.hours, 'hora', 'horas') + ', ' +
+      unitLabel(b.minutes, 'minuto', 'minutos') + ' y ' +
+      unitLabel(b.seconds, 'segundo', 'segundos') + ' juntos';
+    anniversaryMessage.textContent = phrase;
+  }
+  renderAnniversaryMessage();
+  setInterval(renderAnniversaryMessage, 1000);
+
+  // ---------- "Este día, hace un año" ----------
+  const yearAgoBanner = document.getElementById('yearAgoBanner');
+  const yearAgoText = document.getElementById('yearAgoText');
+  let yearAgoTarget = null;
+
+  async function checkAnniversaryFromLastYear(){
+    yearAgoBanner.classList.remove('show');
+    yearAgoTarget = null;
+    const now = new Date();
+    const lastYear = now.getFullYear() - 1;
+    let data;
+    try { data = await idbGet(monthKey(lastYear, now.getMonth())); } catch (e) { data = null; }
+    if (!data) return;
+    const entry = data[pad(now.getDate())];
+    if (!entryHasContent(entry)) return;
+    yearAgoTarget = { year: lastYear, month: now.getMonth(), day: now.getDate() };
+    yearAgoText.textContent = 'Hace un año, un día como hoy: "' + (entry.title || (entry.note || '').slice(0, 60) || 'un recuerdo especial') + '"';
+    yearAgoBanner.classList.add('show');
+  }
+
+  yearAgoBanner.addEventListener('click', async () => {
+    if (!yearAgoTarget) return;
+    if (yearAgoTarget.year !== viewYear || yearAgoTarget.month !== viewMonth){
+      viewYear = yearAgoTarget.year;
+      viewMonth = yearAgoTarget.month;
+      await loadMonth();
+    }
+    openViewPopup(yearAgoTarget.day);
+  });
+
+  // ---------- Atajos de teclado ----------
+  document.addEventListener('keydown', (e) => {
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (calendarWrap.style.display === 'none') return;
+    if (e.key === 'ArrowLeft'){
+      viewMonth--;
+      if (viewMonth < 0){ viewMonth = 11; viewYear--; }
+      loadMonth();
+    } else if (e.key === 'ArrowRight'){
+      viewMonth++;
+      if (viewMonth > 11){ viewMonth = 0; viewYear++; }
+      loadMonth();
+    }
+  });
+
   (async () => {
     await migrateLocalStorageToIndexedDB();
     await removeAllStoredVideos();
@@ -2336,6 +3251,8 @@
   })();
 })();
 </script>
+
+<div id="printArea"></div>
 
 </body>
 </html>
