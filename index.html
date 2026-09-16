@@ -225,6 +225,23 @@
   }
   .intro-btn.primary:hover { filter: brightness(0.95); }
 
+  .intro-edit-icon-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--gold);
+    font-size: 17px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-shadow: 0 10px 24px -10px var(--shadow);
+  }
+  .intro-edit-icon-btn:hover { border-color: var(--gold); }
+
   .eyebrow {
     font-family: var(--font-mono);
     font-size: 12px;
@@ -1302,6 +1319,9 @@
     bottom: 20px;
     left: 20px;
     z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
   .month-picker-toggle {
     width: 44px;
@@ -1458,13 +1478,12 @@
   <div class="intro-message-display" id="introMessageDisplay"></div>
   <div class="intro-textarea-wrap" id="introTextareaWrap" style="display:none">
     <textarea class="intro-textarea" id="introTextarea" placeholder="Escribí acá tu mensaje introductorio..."></textarea>
-    <button type="button" class="intro-emoji-btn" id="introEmojiBtn" aria-label="Insertar emoji">🙂</button>
+    <button type="button" class="intro-emoji-btn" id="introEmojiBtn" aria-label="Insertar emoji" title="Insertar emoji">🙂</button>
     <div class="intro-emoji-panel" id="introEmojiPanel"></div>
   </div>
   <div class="intro-actions">
-    <button type="button" class="intro-btn" id="introEditBtn">Editar mensaje</button>
     <button type="button" class="intro-btn" id="introSaveBtn" style="display:none">Guardar</button>
-    <button type="button" class="intro-btn primary" id="introContinueBtn">Entrar al calendario</button>
+    <button type="button" class="intro-btn primary" id="introContinueBtn">Entrar</button>
   </div>
 </div>
 
@@ -1481,12 +1500,12 @@
     </div>
     <div class="month-nav">
       <button class="today-btn" id="todayBtn">Hoy</button>
-      <button class="nav-btn" id="prevBtn" aria-label="Mes anterior">‹</button>
-      <button class="nav-btn" id="nextBtn" aria-label="Mes siguiente">›</button>
-      <button class="nav-btn" id="searchToggleBtn" aria-label="Buscar">🔍</button>
-      <button class="nav-btn" id="galleryToggleBtn" aria-label="Ver galería">▦</button>
-      <button class="nav-btn" id="themeToggleBtn" aria-label="Cambiar tema">🌙</button>
-      <button class="nav-btn" id="editModeToggleBtn" aria-label="Activar modo edición">✏️</button>
+      <button class="nav-btn" id="prevBtn" aria-label="Mes anterior" title="Mes anterior">‹</button>
+      <button class="nav-btn" id="nextBtn" aria-label="Mes siguiente" title="Mes siguiente">›</button>
+      <button class="nav-btn" id="searchToggleBtn" aria-label="Buscar" title="Buscar entradas">🔍</button>
+      <button class="nav-btn" id="galleryToggleBtn" aria-label="Ver galería" title="Ver galería de fotos">▦</button>
+      <button class="nav-btn" id="themeToggleBtn" aria-label="Cambiar tema" title="Modo oscuro">🌙</button>
+      <button class="nav-btn" id="editModeToggleBtn" aria-label="Activar modo edición" title="Activar modo edición">✏️</button>
     </div>
   </header>
 
@@ -1514,26 +1533,26 @@
 
 <div class="overlay" id="overlay"></div>
 <div class="panel" id="panel">
-  <button class="close-btn" id="closeBtn">✕</button>
+  <button class="close-btn" id="closeBtn" title="Cerrar">✕</button>
   <div class="panel-date" id="panelDate"></div>
   <div class="panel-title" id="panelTitle">Editar fecha</div>
 
   <div class="field-label-row">
     <label for="titleInput">Título</label>
-    <button type="button" class="emoji-trigger" id="emojiBtnTitle" aria-label="Insertar emoji en el título">🙂</button>
+    <button type="button" class="emoji-trigger" id="emojiBtnTitle" aria-label="Insertar emoji en el título" title="Insertar emoji en el título">🙂</button>
   </div>
   <input type="text" id="titleInput" placeholder="Ej. Entrevista de trabajo">
 
   <div class="field-label-row">
     <label for="noteInput">Notas</label>
-    <button type="button" class="emoji-trigger" id="emojiBtnNote" aria-label="Insertar emoji en la nota">🙂</button>
+    <button type="button" class="emoji-trigger" id="emojiBtnNote" aria-label="Insertar emoji en la nota" title="Insertar emoji en la nota">🙂</button>
   </div>
   <textarea id="noteInput" placeholder="Detalles, recordatorios, lo que quieras anotar..."></textarea>
 
   <div class="emoji-panel" id="emojiPanel">
     <div class="emoji-panel-header">
       <span>Emojis</span>
-      <button type="button" class="emoji-panel-close" id="emojiPanelClose" aria-label="Cerrar emojis">✕</button>
+      <button type="button" class="emoji-panel-close" id="emojiPanelClose" aria-label="Cerrar emojis" title="Cerrar emojis">✕</button>
     </div>
     <div class="emoji-grid" id="emojiGrid"></div>
   </div>
@@ -1562,9 +1581,9 @@
 </div>
 
 <div class="heart-popup" id="heartPopup">
-  <button class="heart-close-btn" id="heartCloseBtn">✕</button>
-  <button class="heart-entry-nav prev" id="heartEntryPrevBtn" aria-label="Entrada anterior">‹</button>
-  <button class="heart-entry-nav next" id="heartEntryNextBtn" aria-label="Entrada siguiente">›</button>
+  <button class="heart-close-btn" id="heartCloseBtn" title="Cerrar">✕</button>
+  <button class="heart-entry-nav prev" id="heartEntryPrevBtn" aria-label="Entrada anterior" title="Entrada anterior">‹</button>
+  <button class="heart-entry-nav next" id="heartEntryNextBtn" aria-label="Entrada siguiente" title="Entrada siguiente">›</button>
   <div class="heart-shape">
     <div class="heart-content">
       <div class="heart-date" id="heartDate"></div>
@@ -1576,11 +1595,11 @@
 </div>
 
 <div class="photo-popup" id="photoPopup">
-  <button class="photo-back-btn" id="photoBackBtn" aria-label="Volver">←</button>
-  <button class="photo-download-btn" id="photoDownloadBtn" aria-label="Descargar foto">⬇</button>
-  <button class="photo-nav-btn prev" id="photoPrevBtn" aria-label="Anterior">‹</button>
+  <button class="photo-back-btn" id="photoBackBtn" aria-label="Volver" title="Volver">←</button>
+  <button class="photo-download-btn" id="photoDownloadBtn" aria-label="Descargar foto" title="Descargar foto">⬇</button>
+  <button class="photo-nav-btn prev" id="photoPrevBtn" aria-label="Anterior" title="Foto anterior">‹</button>
   <img class="photo-popup-img" id="photoPopupImg" alt="">
-  <button class="photo-nav-btn next" id="photoNextBtn" aria-label="Siguiente">›</button>
+  <button class="photo-nav-btn next" id="photoNextBtn" aria-label="Siguiente" title="Foto siguiente">›</button>
 </div>
 
 <div class="confirm-popup" id="confirmDeletePopup">
@@ -1603,7 +1622,7 @@
 
 
 <div class="month-picker-widget" id="monthPickerWidget">
-  <button type="button" class="month-picker-toggle" id="monthPickerToggle" aria-label="Elegir mes y año">
+  <button type="button" class="month-picker-toggle" id="monthPickerToggle" aria-label="Elegir mes y año" title="Elegir mes y año">
     <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
       <rect x="3" y="5" width="18" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/>
       <line x1="3" y1="9.5" x2="21" y2="9.5" stroke="currentColor" stroke-width="1.7"/>
@@ -1611,11 +1630,12 @@
       <line x1="16.5" y1="3" x2="16.5" y2="7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
     </svg>
   </button>
+  <button type="button" class="intro-edit-icon-btn" id="introEditBtn" aria-label="Editar mensaje" title="Editar mensaje inicial">✏️</button>
   <div class="month-picker-panel" id="monthPickerPanel">
     <div class="month-picker-year-row">
-      <button type="button" id="monthPickerYearPrev" aria-label="Año anterior">‹</button>
+      <button type="button" id="monthPickerYearPrev" aria-label="Año anterior" title="Año anterior">‹</button>
       <span id="monthPickerYearLabel">2026</span>
-      <button type="button" id="monthPickerYearNext" aria-label="Año siguiente">›</button>
+      <button type="button" id="monthPickerYearNext" aria-label="Año siguiente" title="Año siguiente">›</button>
     </div>
     <div class="month-picker-grid" id="monthPickerGrid"></div>
   </div>
@@ -2588,6 +2608,7 @@
         if (introPage.style.display !== 'none'){
           introPage.style.display = 'none';
           calendarWrap.style.display = 'block';
+          introEditBtn.style.display = 'none';
         }
         loadMonth();
       });
@@ -2856,7 +2877,7 @@
       introMessageDisplay.textContent = msg;
       introMessageDisplay.classList.remove('placeholder');
     } else {
-      introMessageDisplay.textContent = 'Todavía no escribiste un mensaje introductorio. Tocá "Editar mensaje" para agregar uno.';
+      introMessageDisplay.textContent = 'Todavía no escribiste un mensaje introductorio. Tocá el ✏️ de abajo para agregar uno.';
       introMessageDisplay.classList.add('placeholder');
     }
   }
@@ -2891,7 +2912,7 @@
     introMessageDisplay.style.display = 'block';
     introTextareaWrap.style.display = 'none';
     introEmojiPanel.classList.remove('open');
-    introEditBtn.style.display = 'inline-block';
+    introEditBtn.style.display = 'flex';
     introSaveBtn.style.display = 'none';
     renderIntroMessage();
   });
@@ -2903,6 +2924,7 @@
     introEmojiPanel.classList.remove('open');
     introPage.style.display = 'none';
     calendarWrap.style.display = 'block';
+    introEditBtn.style.display = 'none';
   });
 
   async function applyBackupPayload(parsed, mergeOnly){
@@ -2962,9 +2984,11 @@
     if (theme === 'dark'){
       document.documentElement.setAttribute('data-theme', 'dark');
       themeToggleBtn.textContent = '☀️';
+      themeToggleBtn.title = 'Modo claro';
     } else {
       document.documentElement.removeAttribute('data-theme');
       themeToggleBtn.textContent = '🌙';
+      themeToggleBtn.title = 'Modo oscuro';
     }
   }
   applyTheme(localStorage.getItem(THEME_KEY) || 'light');
@@ -2979,6 +3003,7 @@
   editModeToggleBtn.addEventListener('click', () => {
     editMode = !editMode;
     editModeToggleBtn.classList.toggle('active', editMode);
+    editModeToggleBtn.title = editMode ? 'Desactivar modo edición' : 'Activar modo edición';
     document.body.classList.toggle('edit-mode', editMode);
     showToast(editMode ? 'Modo edición activado: tocá cualquier día para editarlo' : 'Modo edición desactivado');
     render();
