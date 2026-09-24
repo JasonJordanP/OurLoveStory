@@ -49,6 +49,7 @@
 
   body {
     background-image:
+      linear-gradient(to bottom, rgba(200,83,121,0.015) 0%, rgba(200,83,121,0.05) 35%, rgba(200,83,121,0.11) 70%, rgba(200,83,121,0.19) 100%),
       radial-gradient(circle at 20% 10%, rgba(200,83,121,0.09), transparent 40%),
       radial-gradient(circle at 80% 90%, rgba(223,160,176,0.14), transparent 40%),
       radial-gradient(circle at 50% 50%, rgba(200,83,121,0.04), transparent 60%),
@@ -1641,7 +1642,7 @@
   </div>
 </div>
 
-<div class="transfer-bar">
+<div class="transfer-bar" id="transferBar" style="display:none">
   <button class="transfer-btn" id="exportBtn">⭳ Exportar</button>
   <button class="transfer-btn" id="generatePdfBtn">📄 Generar PDF</button>
   <button class="transfer-btn" id="importBtn">⭱ Importar</button>
@@ -3005,6 +3006,7 @@
     editModeToggleBtn.classList.toggle('active', editMode);
     editModeToggleBtn.title = editMode ? 'Desactivar modo edición' : 'Activar modo edición';
     document.body.classList.toggle('edit-mode', editMode);
+    document.getElementById('transferBar').style.display = editMode ? 'flex' : 'none';
     showToast(editMode ? 'Modo edición activado: tocá cualquier día para editarlo' : 'Modo edición desactivado');
     render();
   });
@@ -3190,8 +3192,8 @@
     }
     if (months < 0){ months += 12; years--; }
 
-    const weeks = Math.floor(days / 7);
-    const remDays = days % 7;
+    const weeks = Math.min(Math.floor(days / 7), 3);
+    const remDays = days - weeks * 7;
 
     return { years, months, weeks, days: remDays, hours, minutes, seconds };
   }
@@ -3216,7 +3218,7 @@
       unitLabel(b.hours, 'hora', 'horas') + ', ' +
       unitLabel(b.minutes, 'minuto', 'minutos') + ' y ' +
       unitLabel(b.seconds, 'segundo', 'segundos') + ' juntos';
-    anniversaryMessage.textContent = phrase;
+    anniversaryMessage.textContent = '¡' + phrase + '!';
   }
   renderAnniversaryMessage();
   setInterval(renderAnniversaryMessage, 1000);
