@@ -321,6 +321,21 @@
     overflow-x: auto;
   }
 
+  .seen-counter {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(15px, 2.4vw, 20px);
+    color: var(--paper);
+    text-align: center;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin: 22px auto 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
   .year-ago-banner {
     display: none;
     align-items: center;
@@ -1529,6 +1544,7 @@
     <div class="gallery-view" id="galleryView"></div>
     <div class="board-spinner"></div>
   </div>
+  <div class="seen-counter" id="seenCounter"></div>
   <div class="status" id="status"></div>
 </div>
 
@@ -1917,6 +1933,7 @@
 
       grid.appendChild(cell);
     }
+    updateSeenCounter();
   }
 
   const storageInfoText = document.getElementById('storageInfoText');
@@ -2331,6 +2348,29 @@
       });
       photoWrap.appendChild(dots);
     }
+  }
+
+  const seenCountsByMonth = {};
+  const seenCounter = document.getElementById('seenCounter');
+
+  function countDaysWithEntries(monthObj){
+    let n = 0;
+    Object.keys(monthObj || {}).forEach(k => { if (entryHasContent(monthObj[k])) n++; });
+    return n;
+  }
+
+  function updateSeenCounter(){
+    seenCountsByMonth[monthKey(viewYear, viewMonth)] = countDaysWithEntries(monthData);
+    const total = Object.values(seenCountsByMonth).reduce((a, b) => a + b, 0);
+    seenCounter.textContent = '¡Nos vimos ' + total + (total === 1 ? ' día' : ' días') + '!';
+  }
+
+  async function refreshSeenCountsFromDB(){
+    try {
+      const all = await idbGetAllEntries();
+      Object.keys(all).forEach(k => { seenCountsByMonth[k] = countDaysWithEntries(all[k]); });
+    } catch (e) { /* ignorar */ }
+    updateSeenCounter();
   }
 
   function entryHasContent(entry){
@@ -2831,6 +2871,7 @@
         const partInfo = (parsed && parsed.totalParts > 1) ? (' (parte ' + parsed.part + ' de ' + parsed.totalParts + ')') : '';
         setStatus('Datos importados correctamente' + partInfo);
         await loadMonth();
+        await refreshSeenCountsFromDB();
       } catch (e) {
         setStatus('El archivo no es un backup válido', true);
       }
@@ -3175,27 +3216,32 @@
   const anniversaryMessage = document.getElementById('anniversaryMessage');
 
   function getAnniversaryBreakdown(start, now){
-    let years = now.getFullYear() - start.getFullYear();
-    let months = now.getMonth() - start.getMonth();
-    let days = now.getDate() - start.getDate();
-    let hours = now.getHours() - start.getHours();
-    let minutes = now.getMinutes() - start.getMinutes();
-    let seconds = now.getSeconds() - start.getSeconds();
+    let years = 0, months = 0;
+    let cursor = new Date(start.getTime());
 
-    if (seconds < 0){ seconds += 60; minutes--; }
-    if (minutes < 0){ minutes += 60; hours--; }
-    if (hours < 0){ hours += 24; days--; }
-    if (days < 0){
-      const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-      days += prevMonth.getDate();
-      months--;
+    // Avanzamos años completos usando el calendario real
+    while (true){
+      const next = new Date(cursor.getTime());
+      next.setFullYear(next.getFullYear() + 1);
+      if (next <= now){ cursor = next; years++; } else break;
     }
-    if (months < 0){ months += 12; years--; }
+    // Avanzamos meses completos (respeta meses de 28, 29, 30 o 31 días)
+    while (true){
+      const next = new Date(cursor.getTime());
+      next.setMonth(next.getMonth() + 1);
+      if (next <= now){ cursor = next; months++; } else break;
+    }
 
-    const weeks = Math.min(Math.floor(days / 7), 3);
-    const remDays = days - weeks * 7;
+    // Lo que sobra entre "cursor" y "now" se reparte en semanas, días, horas, minutos y segundos
+    let totalSeconds = Math.floor((now - cursor) / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    totalSeconds -= days * 86400;
+    const hours = Math.floor(totalSeconds / 3600);
+    totalSeconds -= hours * 3600;
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds - minutes * 60;
 
-    return { years, months, weeks, days: remDays, hours, minutes, seconds };
+    return { years, months, days, hours, minutes, seconds };
   }
 
   function unitLabel(n, singular, plural){
@@ -3213,7 +3259,6 @@
     const phrase = 'Llevamos ' +
       unitLabel(b.years, 'año', 'años') + ', ' +
       unitLabel(b.months, 'mes', 'meses') + ', ' +
-      unitLabel(b.weeks, 'semana', 'semanas') + ', ' +
       unitLabel(b.days, 'día', 'días') + ', ' +
       unitLabel(b.hours, 'hora', 'horas') + ', ' +
       unitLabel(b.minutes, 'minuto', 'minutos') + ' y ' +
@@ -3275,6 +3320,7 @@
     await autoImportBackupIfPresent();
     await seedBrokenHeartDay();
     await loadMonth();
+    await refreshSeenCountsFromDB();
   })();
 })();
 </script>
