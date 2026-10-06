@@ -107,6 +107,9 @@
     letter-spacing: -0.01em;
     white-space: nowrap;
   }
+  [data-theme="dark"] .page-title-text {
+    color: var(--gold);
+  }
 
   @media (max-width: 480px) {
     .page-title { margin-bottom: 20px; }
@@ -324,8 +327,8 @@
   .seen-counter {
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: clamp(15px, 2.4vw, 20px);
-    color: var(--paper);
+    font-size: clamp(19px, 3.4vw, 28px);
+    color: var(--gold);
     text-align: center;
     background: var(--surface-2);
     border: 1px solid var(--line);
@@ -2806,9 +2809,22 @@
       });
 
       setStatus('');
-      window.print();
+
+      const pendingImgs = Array.from(printArea.querySelectorAll('img'));
+      await Promise.all(pendingImgs.map(img => img.complete
+        ? Promise.resolve()
+        : new Promise(res => { img.onload = res; img.onerror = res; })
+      ));
+
+      try {
+        window.print();
+      } catch (printErr) {
+        console.error('Error al abrir el diálogo de impresión:', printErr);
+        setStatus('No se pudo abrir el diálogo de impresión automáticamente. Usá Ctrl+P (o Cmd+P en Mac) para imprimirlo o guardarlo como PDF: el contenido ya está listo.', true);
+      }
     } catch (e) {
-      setStatus('No se pudo generar el PDF. Probá de nuevo.', true);
+      console.error('Error al preparar el PDF:', e);
+      setStatus('No se pudo preparar el documento. Probá de nuevo.', true);
     }
   });
 
