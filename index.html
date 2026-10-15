@@ -3025,6 +3025,10 @@
     introPage.style.display = 'none';
     calendarWrap.style.display = 'block';
     introEditBtn.style.display = 'none';
+    // Al entrar, el calendario siempre arranca en octubre de 2025
+    viewYear = 2025;
+    viewMonth = 9;
+    loadMonth();
   });
 
   async function applyBackupPayload(parsed, mergeOnly){
