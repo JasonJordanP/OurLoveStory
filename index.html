@@ -1118,6 +1118,55 @@
   }
   .heart-note p:last-child { margin-bottom: 0; }
 
+  .heart-comments {
+    margin-top: 20px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(74,16,48,0.3);
+    text-align: left;
+  }
+  .heart-comments-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #4A1030;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  .heart-comments-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .heart-comment {
+    position: relative;
+    background: rgba(255,255,255,0.4);
+    border-radius: 10px;
+    padding: 9px 30px 9px 12px;
+    color: #4A1030;
+  }
+  .heart-comment-text { font-size: 13px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+  .heart-comment-meta { font-family: var(--font-mono); font-size: 10px; opacity: .75; margin-top: 4px; }
+  .heart-comment-del {
+    position: absolute; top: 6px; right: 6px;
+    width: 20px; height: 20px; border-radius: 50%; border: none;
+    background: rgba(74,16,48,0.15); color: #4A1030; font-size: 10px; cursor: pointer; padding: 0;
+  }
+  .heart-comment-del:hover { background: rgba(74,16,48,0.3); }
+  .heart-comments-empty { font-size: 12.5px; color: #4A1030; opacity: .8; text-align: center; }
+  .heart-comment-form textarea {
+    width: 100%; min-height: 70px; resize: vertical; box-sizing: border-box;
+    background: rgba(255,255,255,0.45); border: 1px solid rgba(255,255,255,0.7);
+    border-radius: 8px; padding: 9px 11px; font-family: var(--font-body); font-size: 13px; color: #4A1030;
+  }
+  .heart-comment-form textarea::placeholder { color: rgba(74,16,48,0.6); }
+  .heart-comment-form textarea:focus { outline: none; border-color: #FFFFFF; background: rgba(255,255,255,0.6); }
+  .heart-comment-actions { display: flex; gap: 8px; margin-top: 8px; }
+  .heart-comment-actions button { flex: 1; padding: 9px 10px; font-size: 12.5px; }
+  .heart-comment-add {
+    display: block; width: 100%; padding: 10px 12px; border-radius: 10px;
+    border: 1px dashed rgba(74,16,48,0.6); background: rgba(255,255,255,0.25);
+    color: #4A1030; font-family: var(--font-body); font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .heart-comment-add:hover { background: rgba(255,255,255,0.45); }
+
   .photo-popup {
     position: fixed;
     top: 50%;
@@ -1494,6 +1543,9 @@
       border-radius: 6px;
     }
     .print-empty { text-align: center; color: #888; margin-top: 40px; }
+    .print-comments { margin-top: 8px; padding-left: 10px; border-left: 2px solid #C85379; }
+    .print-comment { font-size: 12px; line-height: 1.4; margin-bottom: 4px; white-space: pre-wrap; }
+    .print-comment small { color: #888; }
   }
 </style>
 </head>
@@ -1619,6 +1671,18 @@
       <div class="heart-photo-wrap" id="heartPhotoWrap"></div>
       <div class="heart-title" id="heartTitleText"></div>
       <div class="heart-note" id="heartNoteText"></div>
+      <div class="heart-comments" id="heartComments">
+        <div class="heart-comments-title">Comentarios</div>
+        <div class="heart-comments-list" id="heartCommentsList"></div>
+        <div class="heart-comment-form" id="heartCommentForm" style="display:none">
+          <textarea id="heartCommentInput" placeholder="Escribí tu comentario..." maxlength="1000"></textarea>
+          <div class="heart-comment-actions">
+            <button type="button" class="ghost" id="heartCommentCancel">Cancelar</button>
+            <button type="button" class="primary" id="heartCommentSave">Publicar</button>
+          </div>
+        </div>
+        <button type="button" class="heart-comment-add" id="heartCommentAddBtn">+ Agregar comentario</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1637,6 +1701,15 @@
   <div class="confirm-popup-actions">
     <button type="button" class="ghost" id="confirmDeleteCancel">Cancelar</button>
     <button type="button" class="primary" id="confirmDeleteConfirm">Sí, borrar</button>
+  </div>
+</div>
+
+<div class="confirm-popup" id="confirmCommentPopup">
+  <div class="confirm-popup-title">¿Borrar este comentario?</div>
+  <div class="confirm-popup-text">El comentario se va a eliminar de esta fecha. Esta acción no se puede deshacer.</div>
+  <div class="confirm-popup-actions">
+    <button type="button" class="ghost" id="confirmCommentCancel">Cancelar</button>
+    <button type="button" class="primary" id="confirmCommentConfirm">Sí, borrar</button>
   </div>
 </div>
 
@@ -2319,6 +2392,116 @@
 
   const heartPopup = document.getElementById('heartPopup');
 
+  // ---------- Comentarios por fecha ----------
+  const heartCommentsList = document.getElementById('heartCommentsList');
+  const heartCommentForm = document.getElementById('heartCommentForm');
+  const heartCommentInput = document.getElementById('heartCommentInput');
+  const heartCommentAddBtn = document.getElementById('heartCommentAddBtn');
+
+  function formatCommentDate(iso){
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  function closeCommentForm(){
+    heartCommentForm.style.display = 'none';
+    heartCommentInput.value = '';
+    heartCommentAddBtn.style.display = 'block';
+  }
+
+  function renderHeartComments(){
+    heartCommentsList.innerHTML = '';
+    const entry = monthData[pad(heartDay)] || {};
+    const comments = entry.comments || [];
+    if (comments.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'heart-comments-empty';
+      empty.textContent = 'Todavía no hay comentarios.';
+      heartCommentsList.appendChild(empty);
+      return;
+    }
+    comments.forEach((cm, idx) => {
+      const box = document.createElement('div');
+      box.className = 'heart-comment';
+      const text = document.createElement('div');
+      text.className = 'heart-comment-text';
+      text.textContent = cm.text;
+      const meta = document.createElement('div');
+      meta.className = 'heart-comment-meta';
+      meta.textContent = formatCommentDate(cm.at);
+      box.appendChild(text);
+      box.appendChild(meta);
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'heart-comment-del';
+      del.textContent = '✕';
+      del.title = 'Borrar comentario';
+      del.setAttribute('aria-label', 'Borrar comentario');
+      del.addEventListener('click', () => askDeleteComment(idx));
+      box.appendChild(del);
+      heartCommentsList.appendChild(box);
+    });
+  }
+
+  async function saveHeartComment(){
+    const text = heartCommentInput.value.trim();
+    if (!text) return;
+    const entry = monthData[pad(heartDay)];
+    if (!entry) return;
+    const previous = entry.comments ? entry.comments.slice() : [];
+    entry.comments = previous.concat([{ text, at: new Date().toISOString() }]);
+    try {
+      await saveMonth();
+      closeCommentForm();
+      renderHeartComments();
+      setStatus('Comentario agregado');
+    } catch (e) {
+      entry.comments = previous;
+      setStatus('No se pudo guardar el comentario', true);
+    }
+  }
+
+  async function deleteHeartComment(idx){
+    const entry = monthData[pad(heartDay)];
+    if (!entry || !entry.comments) return;
+    const previous = entry.comments.slice();
+    entry.comments.splice(idx, 1);
+    try {
+      await saveMonth();
+      renderHeartComments();
+      setStatus('Comentario borrado');
+    } catch (e) {
+      entry.comments = previous;
+      setStatus('No se pudo borrar el comentario', true);
+    }
+  }
+
+  const confirmCommentPopup = document.getElementById('confirmCommentPopup');
+  let commentToDelete = null;
+  function askDeleteComment(idx){
+    commentToDelete = idx;
+    confirmCommentPopup.classList.add('open');
+  }
+  document.getElementById('confirmCommentCancel').addEventListener('click', () => {
+    commentToDelete = null;
+    confirmCommentPopup.classList.remove('open');
+  });
+  document.getElementById('confirmCommentConfirm').addEventListener('click', async () => {
+    confirmCommentPopup.classList.remove('open');
+    const idx = commentToDelete;
+    commentToDelete = null;
+    if (idx !== null) await deleteHeartComment(idx);
+  });
+
+  heartCommentAddBtn.addEventListener('click', () => {
+    heartCommentAddBtn.style.display = 'none';
+    heartCommentForm.style.display = 'block';
+    heartCommentInput.focus();
+  });
+  document.getElementById('heartCommentCancel').addEventListener('click', closeCommentForm);
+  document.getElementById('heartCommentSave').addEventListener('click', saveHeartComment);
+
   function renderHeartCarousel(){
     const photoWrap = document.getElementById('heartPhotoWrap');
     photoWrap.innerHTML = '';
@@ -2470,6 +2653,8 @@
 
     document.getElementById('heartTitleText').textContent = entry.title || '';
     renderHeartNote(entry.note || (entry.title ? '' : 'Sin notas todavía.'));
+    closeCommentForm();
+    renderHeartComments();
 
     overlay.classList.add('open');
     heartPopup.classList.add('open');
@@ -2552,6 +2737,7 @@
   });
 
   function closeTopLayer(){
+    if (confirmCommentPopup.classList.contains('open')) { confirmCommentPopup.classList.remove('open'); commentToDelete = null; return; }
     if (confirmDeletePopup.classList.contains('open')) { confirmDeletePopup.classList.remove('open'); return; }
     if (confirmDiscardPopup.classList.contains('open')) { confirmDiscardPopup.classList.remove('open'); return; }
     if (photoPopup.classList.contains('open')) { closePhotoPopup(); return; }
@@ -2590,6 +2776,7 @@
       delete monthData[key];
     } else {
       monthData[key] = { title, note, media: pendingMedia.slice() };
+      if (previousEntry && previousEntry.comments && previousEntry.comments.length) monthData[key].comments = previousEntry.comments;
     }
 
     setPanelStatus('Guardando...');
@@ -2835,6 +3022,21 @@
             }
           });
           if (photoRow.children.length) section.appendChild(photoRow);
+        }
+
+        if (it.entry.comments && it.entry.comments.length){
+          const cBox = document.createElement('div');
+          cBox.className = 'print-comments';
+          it.entry.comments.forEach(cm => {
+            const line = document.createElement('div');
+            line.className = 'print-comment';
+            line.textContent = cm.text + ' ';
+            const when = document.createElement('small');
+            when.textContent = '(' + formatCommentDate(cm.at) + ')';
+            line.appendChild(when);
+            cBox.appendChild(line);
+          });
+          section.appendChild(cBox);
         }
 
         printArea.appendChild(section);
