@@ -591,8 +591,8 @@
     top: 50%;
     left: 50%;
     height: auto;
-    max-height: 85vh;
-    width: min(400px, 90vw);
+    max-height: 92vh;
+    width: min(580px, 94vw);
     background: linear-gradient(160deg, #FF7EC0, #FF4FA0);
     border: none;
     border-radius: 24px;
@@ -602,7 +602,7 @@
     pointer-events: none;
     transition: transform .25s ease, opacity .2s ease;
     z-index: 11;
-    padding: 28px 24px;
+    padding: 34px 34px;
     overflow-y: auto;
   }
   .panel.open { transform: translate(-50%, -50%) scale(1); opacity: 1; pointer-events: auto; }
@@ -688,9 +688,9 @@
   .emoji-panel-close:hover { color: #4A1030; }
   .emoji-grid {
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
+    grid-template-columns: repeat(10, 1fr);
     gap: 4px;
-    max-height: 150px;
+    max-height: 190px;
     overflow-y: auto;
   }
   .emoji-item {
@@ -711,9 +711,9 @@
     border-radius: 8px;
     color: #4A1030;
     font-family: var(--font-body);
-    font-size: 14px;
-    padding: 10px 12px;
-    margin-bottom: 18px;
+    font-size: 15.5px;
+    padding: 12px 14px;
+    margin-bottom: 20px;
     resize: vertical;
   }
   input[type="text"]::placeholder, textarea::placeholder { color: rgba(74,16,48,0.55); }
@@ -723,6 +723,7 @@
     background: rgba(255,255,255,0.24);
   }
   textarea { min-height: 90px; }
+  .panel textarea { min-height: 190px; line-height: 1.5; }
 
   .image-drop {
     border: 1px dashed rgba(255,255,255,0.45);
@@ -737,9 +738,9 @@
   .image-drop:hover { border-color: #FFFFFF; color: #4A1030; }
   .image-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-bottom: 18px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
   }
   .image-thumb-wrap {
     position: relative;
@@ -1620,19 +1621,18 @@
 
   <div class="field-label-row">
     <label for="titleInput">Título</label>
-    <button type="button" class="emoji-trigger" id="emojiBtnTitle" aria-label="Insertar emoji en el título" title="Insertar emoji en el título">🙂</button>
   </div>
   <input type="text" id="titleInput" placeholder="Ej. Entrevista de trabajo">
 
   <div class="field-label-row">
     <label for="noteInput">Notas</label>
-    <button type="button" class="emoji-trigger" id="emojiBtnNote" aria-label="Insertar emoji en la nota" title="Insertar emoji en la nota">🙂</button>
+    <button type="button" class="emoji-trigger" id="emojiBtnNote" aria-label="Insertar emoji" title="Insertar emoji (en el título o en las notas, donde estés escribiendo)">🙂</button>
   </div>
   <textarea id="noteInput" placeholder="Detalles, recordatorios, lo que quieras anotar..."></textarea>
 
   <div class="emoji-panel" id="emojiPanel">
     <div class="emoji-panel-header">
-      <span>Emojis</span>
+      <span id="emojiTargetLabel">Emojis</span>
       <button type="button" class="emoji-panel-close" id="emojiPanelClose" aria-label="Cerrar emojis" title="Cerrar emojis">✕</button>
     </div>
     <div class="emoji-grid" id="emojiGrid"></div>
@@ -1785,9 +1785,9 @@
   const fileInput = document.getElementById('fileInput');
   const emojiPanel = document.getElementById('emojiPanel');
   const emojiGrid = document.getElementById('emojiGrid');
-  const emojiBtnTitle = document.getElementById('emojiBtnTitle');
   const emojiBtnNote = document.getElementById('emojiBtnNote');
   let activeEmojiField = null;
+  let lastTextField = null;
   let activeEmojiTrigger = null;
 
   function monthKey(y, m){
@@ -2317,26 +2317,29 @@
   }
 
   function insertEmoji(emoji){
-    insertEmojiInto(activeEmojiField || noteInput, emoji);
+    insertEmojiInto(lastTextField || noteInput, emoji);
   }
 
-  function toggleEmojiPanel(field, trigger){
-    const alreadyOpenForThis = emojiPanel.classList.contains('open') && activeEmojiField === field;
-    if (activeEmojiTrigger) activeEmojiTrigger.classList.remove('active');
-    if (alreadyOpenForThis){
+  const emojiTargetLabel = document.getElementById('emojiTargetLabel');
+  function updateEmojiTargetLabel(){
+    const f = lastTextField || noteInput;
+    emojiTargetLabel.textContent = 'Emojis en: ' + (f === titleInput ? 'Título' : 'Notas');
+  }
+  titleInput.addEventListener('focus', () => { lastTextField = titleInput; updateEmojiTargetLabel(); });
+  noteInput.addEventListener('focus', () => { lastTextField = noteInput; updateEmojiTargetLabel(); });
+
+  emojiBtnNote.addEventListener('click', () => {
+    if (emojiPanel.classList.contains('open')){
       emojiPanel.classList.remove('open');
-      activeEmojiField = null;
+      emojiBtnNote.classList.remove('active');
       activeEmojiTrigger = null;
       return;
     }
-    activeEmojiField = field;
-    activeEmojiTrigger = trigger;
-    trigger.classList.add('active');
+    updateEmojiTargetLabel();
     emojiPanel.classList.add('open');
-  }
-
-  emojiBtnTitle.addEventListener('click', () => toggleEmojiPanel(titleInput, emojiBtnTitle));
-  emojiBtnNote.addEventListener('click', () => toggleEmojiPanel(noteInput, emojiBtnNote));
+    emojiBtnNote.classList.add('active');
+    activeEmojiTrigger = emojiBtnNote;
+  });
   document.getElementById('emojiPanelClose').addEventListener('click', () => {
     emojiPanel.classList.remove('open');
     if (activeEmojiTrigger) activeEmojiTrigger.classList.remove('active');
@@ -3014,13 +3017,13 @@
         if (it.entry.media && it.entry.media.length){
           const photoRow = document.createElement('div');
           photoRow.className = 'print-photos';
-          it.entry.media.forEach(m => {
-            if (m && m.type === 'image' && m.src){
-              const img = document.createElement('img');
-              img.src = m.src;
-              photoRow.appendChild(img);
-            }
-          });
+          // Solo la primera imagen de cada fecha
+          const firstImage = it.entry.media.find(m => m && m.type === 'image' && m.src);
+          if (firstImage){
+            const img = document.createElement('img');
+            img.src = firstImage.src;
+            photoRow.appendChild(img);
+          }
           if (photoRow.children.length) section.appendChild(photoRow);
         }
 
